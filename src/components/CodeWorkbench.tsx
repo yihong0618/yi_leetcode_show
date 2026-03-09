@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { runPythonInBrowser, type PythonRunResult } from "../lib/pyodide";
-import type { ProblemDefinition, SolutionDefinition } from "../types";
+import type {
+  ProblemDefinition,
+  PythonEntry,
+  SolutionDefinition
+} from "../types";
 
 interface CodeWorkbenchProps {
   problem: ProblemDefinition;
@@ -11,12 +15,32 @@ interface CodeWorkbenchProps {
   inputValue: string;
   pythonCode: string;
   onPythonCodeChange: (nextCode: string) => void;
-  expectedOutput: number[];
+  expectedOutput: unknown;
   onResetDefaults: () => void;
   onLoadReferenceCode: () => void;
 }
 
 type RunStatus = "idle" | "running" | "success" | "error";
+
+function buildRunConvention(entry: PythonEntry) {
+  if (entry.mode === "design-class") {
+    return (
+      <>
+        <code>solve(operations, arguments)</code> 或{" "}
+        <code>class {entry.solutionClassName}</code>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <code>solve(s)</code> 或{" "}
+      <code>
+        {entry.solutionClassName}.{entry.solutionMethodName}
+      </code>
+    </>
+  );
+}
 
 export function CodeWorkbench({
   problem,
@@ -39,7 +63,7 @@ export function CodeWorkbench({
     setRunStatus("idle");
     setRunResult(null);
     setErrorMessage("");
-  }, [problem.id, pythonCode]);
+  }, [inputValue, problem.id, pythonCode]);
 
   async function handleRunPython() {
     setRunStatus("running");
@@ -50,7 +74,7 @@ export function CodeWorkbench({
       const nextResult = await runPythonInBrowser({
         code: pythonCode,
         inputValue,
-        ...problem.pythonEntry
+        pythonEntry: problem.pythonEntry
       });
 
       setRunResult(nextResult);
@@ -112,10 +136,7 @@ export function CodeWorkbench({
         <div className="workbench__mini-card">
           <span>运行约定</span>
           <strong>
-            <code>solve(s)</code> 或{" "}
-            <code>
-              Solution.{problem.pythonEntry.solutionMethodName}
-            </code>
+            {buildRunConvention(problem.pythonEntry)}
           </strong>
         </div>
         <div className="workbench__mini-card">

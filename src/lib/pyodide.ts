@@ -1,3 +1,5 @@
+import type { PythonEntry } from "../types";
+
 const PYODIDE_VERSION = "0.29.3";
 const PYODIDE_INDEX_URL = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
 
@@ -15,9 +17,7 @@ interface PyodideWindow extends Window {
 interface PythonRunOptions {
   code: string;
   inputValue: string;
-  fallbackFunctionName: string;
-  solutionClassName: string;
-  solutionMethodName: string;
+  pythonEntry: PythonEntry;
 }
 
 export interface PythonRunResult {
@@ -74,17 +74,16 @@ async function getPyodide() {
 export async function runPythonInBrowser({
   code,
   inputValue,
-  fallbackFunctionName,
-  solutionClassName,
-  solutionMethodName
+  pythonEntry
 }: PythonRunOptions): Promise<PythonRunResult> {
   const pyodide = await getPyodide();
 
   pyodide.globals.set("user_code", code);
   pyodide.globals.set("input_value", inputValue);
-  pyodide.globals.set("fallback_function_name", fallbackFunctionName);
-  pyodide.globals.set("solution_class_name", solutionClassName);
-  pyodide.globals.set("solution_method_name", solutionMethodName);
+  pyodide.globals.set(
+    "python_entry",
+    JSON.stringify(pythonEntry)
+  );
 
   const rawPayload = await pyodide.runPythonAsync(`
 import contextlib
@@ -93,25 +92,91 @@ import json
 
 namespace = {}
 stdout_buffer = io.StringIO()
+entry = json.loads(python_entry)
 
 with contextlib.redirect_stdout(stdout_buffer):
     exec(user_code, namespace)
 
-    if fallback_function_name in namespace:
-        result = namespace[fallback_function_name](input_value)
-    elif solution_class_name in namespace:
-        solver = namespace[solution_class_name]()
+    mode = entry.get("mode", "single-input")
+    fallback_function_name = entry["fallbackFunctionName"]
+    solution_class_name = entry["solutionClassName"]
 
-        if not hasattr(solver, solution_method_name):
+    if mode == "design-class":
+        try:
+            payload = json.loads(input_value)
+        except json.JSONDecodeError as exc:
             raise RuntimeError(
-                f"{solution_class_name} is missing method {solution_method_name}"
+                "Design problem input must be valid JSON."
+            ) from exc
+
+        if (
+            isinstance(payload, list)
+            and len(payload) == 2
+            and all(isinstance(item, list) for item in payload)
+        ):
+            operations, arguments = payload
+        elif isinstance(payload, dict):
+            operations = payload.get("operations")
+            arguments = payload.get("arguments")
+        else:
+            raise RuntimeError(
+                'Use [operations, arguments] or {"operations": [...], "arguments": [...]} as input.'
             )
 
-        result = getattr(solver, solution_method_name)(input_value)
+        if not isinstance(operations, list) or not isinstance(arguments, list):
+            raise RuntimeError("operations and arguments must both be lists.")
+
+        if len(operations) != len(arguments):
+            raise RuntimeError("operations and arguments must have the same length.")
+
+        if fallback_function_name in namespace:
+            result = namespace[fallback_function_name](operations, arguments)
+        elif solution_class_name in namespace:
+            trie = None
+            result = []
+
+            for op, method_args in zip(operations, arguments):
+                if not isinstance(method_args, list):
+                    raise RuntimeError(f"Arguments for {op} must be a list.")
+
+                if op == solution_class_name:
+                    trie = namespace[solution_class_name](*method_args)
+                    result.append(None)
+                    continue
+
+                if trie is None:
+                    raise RuntimeError(
+                        f"{solution_class_name} must be constructed before calling {op}."
+                    )
+
+                if not hasattr(trie, op):
+                    raise RuntimeError(
+                        f"{solution_class_name} is missing method {op}"
+                    )
+
+                result.append(getattr(trie, op)(*method_args))
+        else:
+            raise RuntimeError(
+                f"Please define {fallback_function_name}(operations, arguments) or class {solution_class_name}"
+            )
     else:
-        raise RuntimeError(
-            f"Please define {fallback_function_name}(s) or {solution_class_name}.{solution_method_name}"
-        )
+        solution_method_name = entry["solutionMethodName"]
+
+        if fallback_function_name in namespace:
+            result = namespace[fallback_function_name](input_value)
+        elif solution_class_name in namespace:
+            solver = namespace[solution_class_name]()
+
+            if not hasattr(solver, solution_method_name):
+                raise RuntimeError(
+                    f"{solution_class_name} is missing method {solution_method_name}"
+                )
+
+            result = getattr(solver, solution_method_name)(input_value)
+        else:
+            raise RuntimeError(
+                f"Please define {fallback_function_name}(s) or {solution_class_name}.{solution_method_name}"
+            )
 
 json.dumps(
     {

@@ -684,6 +684,14 @@ button {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
+.animation-player__input-control--multiline {
+  min-height: 180px;
+  padding: 16px 18px;
+  resize: vertical;
+  font-family: var(--mono-font);
+  line-height: 1.6;
+}
+
 .animation-player__header {
   display: flex;
   justify-content: space-between;
@@ -705,6 +713,10 @@ button {
   gap: 18px;
 }
 
+.animation-player__grid--trie {
+  grid-template-columns: 1fr;
+}
+
 .stage-card,
 .details-card {
   border-radius: 24px;
@@ -718,6 +730,14 @@ button {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(249, 245, 237, 0.96)),
     var(--panel-strong);
+}
+
+.stage-card--trie {
+  padding: 26px;
+}
+
+.details-card--trie {
+  gap: 18px;
 }
 
 .stage-card__caption {
@@ -977,6 +997,231 @@ button {
   text-align: right;
 }
 
+.trie-current {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(48, 77, 182, 0.1), rgba(255, 255, 255, 0.9)),
+    white;
+  border: 1px solid rgba(48, 77, 182, 0.14);
+}
+
+.trie-current span,
+.trie-node__eyebrow,
+.trie-board__depth {
+  color: var(--muted);
+  font-size: 0.76rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-family: var(--mono-font);
+}
+
+.trie-current strong,
+.trie-node strong {
+  overflow-wrap: anywhere;
+}
+
+.trie-current code,
+.trie-node code {
+  font-family: var(--mono-font);
+  font-size: 0.84rem;
+  overflow-wrap: anywhere;
+}
+
+.trie-scene {
+  display: grid;
+  gap: 0;
+  padding: 30px 34px;
+  min-height: 640px;
+  border-radius: 28px;
+  border: 1px solid rgba(22, 34, 51, 0.08);
+  background:
+    radial-gradient(circle at top center, rgba(255, 255, 255, 0.7), transparent 38%),
+    linear-gradient(180deg, rgba(248, 244, 238, 0.94), rgba(232, 224, 210, 0.96));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.68),
+    inset 0 -24px 60px rgba(155, 131, 99, 0.06);
+}
+
+.trie-scene__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.trie-edge {
+  stroke: rgba(120, 123, 129, 0.34);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition:
+    stroke 220ms ease,
+    stroke-width 220ms ease,
+    opacity 220ms ease;
+}
+
+.trie-edge--active {
+  stroke: rgba(68, 118, 96, 0.72);
+  stroke-width: 4;
+}
+
+.trie-edge--new {
+  stroke: rgba(15, 122, 108, 0.86);
+}
+
+.trie-point {
+  transition: transform 220ms ease;
+}
+
+.trie-point__halo {
+  fill: transparent;
+  opacity: 0;
+}
+
+.trie-point__outer {
+  fill: rgba(244, 244, 242, 0.92);
+  stroke: rgba(158, 160, 165, 0.92);
+  stroke-width: 2.5;
+}
+
+.trie-point__inner {
+  fill: rgba(255, 255, 255, 0.9);
+}
+
+.trie-point__label {
+  fill: #223041;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.trie-point__prefix {
+  fill: rgba(22, 34, 51, 0.54);
+  font-size: 12px;
+  font-family: var(--mono-font);
+}
+
+.trie-point__end rect {
+  fill: rgba(204, 212, 196, 0.94);
+  stroke: rgba(109, 134, 111, 0.66);
+  stroke-width: 1.2;
+}
+
+.trie-point__end text {
+  fill: #506450;
+  font-size: 11px;
+  font-family: var(--mono-font);
+  letter-spacing: 0.12em;
+}
+
+.trie-point--terminal .trie-point__outer {
+  fill: rgba(214, 232, 216, 0.96);
+  stroke: rgba(102, 144, 113, 0.92);
+}
+
+.trie-point--terminal .trie-point__inner {
+  fill: rgba(236, 245, 236, 0.98);
+}
+
+.trie-point--active .trie-point__outer {
+  stroke: rgba(73, 120, 98, 0.94);
+  stroke-width: 3.2;
+}
+
+.trie-point--active .trie-point__inner {
+  fill: rgba(240, 247, 240, 0.98);
+}
+
+.trie-point--new .trie-point__halo {
+  fill: rgba(15, 122, 108, 0.16);
+  opacity: 1;
+  animation: trie-pulse 1.4s ease-out infinite;
+}
+
+.trie-point--current .trie-point__halo {
+  fill: rgba(197, 90, 28, 0.12);
+  opacity: 1;
+}
+
+.trie-point--current .trie-point__outer {
+  stroke: rgba(197, 90, 28, 0.92);
+  stroke-width: 3.6;
+}
+
+.trie-point--current .trie-point__inner {
+  fill: rgba(255, 245, 239, 0.98);
+}
+
+.trie-point--current .trie-point__prefix {
+  fill: rgba(197, 90, 28, 0.82);
+}
+
+.trie-point--active.trie-point--current .trie-point__halo {
+  fill: rgba(197, 90, 28, 0.14);
+}
+
+.trie-point .trie-point__label {
+  font-family: var(--mono-font);
+}
+
+.trie-point--root .trie-point__outer {
+  fill: #24344b;
+  stroke: #1c2a3e;
+}
+
+.trie-point--root .trie-point__inner {
+  fill: #24344b;
+}
+
+.trie-point--root .trie-point__label {
+  fill: #f6f0e6;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+}
+
+.legend-row--trie span:nth-child(1)::before {
+  background: var(--blue);
+}
+
+.legend-row--trie span:nth-child(2)::before {
+  background: var(--teal);
+}
+
+.legend-row--trie span:nth-child(3)::before {
+  background: var(--gold);
+}
+
+.trie-history {
+  display: grid;
+  gap: 10px;
+}
+
+.trie-history__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(22, 34, 51, 0.08);
+}
+
+.trie-history__item strong,
+.trie-history__item span {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.trie-history__item span {
+  color: var(--muted);
+  font-family: var(--mono-font);
+  text-align: right;
+}
+
 .controls {
   display: grid;
   gap: 16px;
@@ -1094,6 +1339,21 @@ button:hover {
   .segment-stack__item span {
     text-align: left;
   }
+
+  .trie-history__item {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .trie-history__item span {
+    text-align: left;
+  }
+
+  .trie-scene {
+    padding: 16px;
+    min-height: 0;
+    overflow-x: auto;
+  }
 }
 
 @keyframes rise-in {
@@ -1105,5 +1365,17 @@ button:hover {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes trie-pulse {
+  from {
+    transform: scale(0.88);
+    opacity: 0.72;
+  }
+
+  to {
+    transform: scale(1.18);
+    opacity: 0;
   }
 }

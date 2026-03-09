@@ -9,6 +9,51 @@ export interface Segment {
   colorIndex: number;
 }
 
+export interface VariableItem {
+  name: string;
+  value: string;
+}
+
+export interface InspectBlock {
+  label: string;
+  value: string;
+}
+
+export interface TrieNodeSnapshot {
+  id: string;
+  prefix: string;
+  depth: number;
+  isTerminal: boolean;
+  childKeys: string[];
+  isActive: boolean;
+  isCurrent: boolean;
+  isNew: boolean;
+}
+
+export interface TrieHistoryItem {
+  index: number;
+  name: string;
+  argument: string;
+  output: unknown;
+}
+
+export interface TrieView {
+  kind: "trie";
+  currentOperationIndex: number | null;
+  currentOperationName: string | null;
+  currentArgument: string | null;
+  currentPrefix: string;
+  nodes: TrieNodeSnapshot[];
+  history: TrieHistoryItem[];
+}
+
+export interface PartitionLabelsView {
+  kind: "partition-labels";
+  characters: string[];
+}
+
+export type AnimationFrameView = PartitionLabelsView | TrieView;
+
 export interface AnimationFrame {
   id: string;
   phase: FramePhase;
@@ -19,16 +64,19 @@ export interface AnimationFrame {
   currentChar: string | null;
   rangeStart: number;
   rangeEnd: number;
-  result: number[];
+  result: unknown[];
   closedSegments: Segment[];
   focusChar: string | null;
   mappedChars: string[];
   lastMap: Record<string, number>;
+  view?: AnimationFrameView;
+  variables?: VariableItem[];
+  inspectBlocks?: InspectBlock[];
 }
 
 export interface ProblemVisualization {
   inputValue: string;
-  expectedOutput: number[];
+  expectedOutput: unknown;
   lastOrder: string[];
   frames: AnimationFrame[];
 }
@@ -42,6 +90,21 @@ export interface SolutionDefinition {
   highlightLines: Record<CodeStep, number[]>;
 }
 
+export interface SingleInputPythonEntry {
+  mode?: "single-input";
+  fallbackFunctionName: string;
+  solutionClassName: string;
+  solutionMethodName: string;
+}
+
+export interface DesignClassPythonEntry {
+  mode: "design-class";
+  fallbackFunctionName: string;
+  solutionClassName: string;
+}
+
+export type PythonEntry = SingleInputPythonEntry | DesignClassPythonEntry;
+
 export interface ProblemDefinition {
   id: string;
   title: string;
@@ -52,14 +115,12 @@ export interface ProblemDefinition {
   algorithmNotes: string[];
   inputLabel: string;
   defaultInput: string;
+  inputPlaceholder?: string;
+  inputMultiline?: boolean;
   leetcodeUrl: string;
   defaultSolutionId: string;
   solutions: SolutionDefinition[];
-  pythonEntry: {
-    fallbackFunctionName: string;
-    solutionClassName: string;
-    solutionMethodName: string;
-  };
+  pythonEntry: PythonEntry;
   buildVisualization: (input: string) => ProblemVisualization;
 }
 

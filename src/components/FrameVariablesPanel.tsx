@@ -1,13 +1,13 @@
-import type { AnimationProblem, AnimationFrame } from "../types";
+import type {
+  AnimationProblem,
+  AnimationFrame,
+  InspectBlock,
+  VariableItem
+} from "../types";
 
 interface FrameVariablesPanelProps {
   problem: AnimationProblem;
   frameIndex: number;
-}
-
-interface VariableItem {
-  name: string;
-  value: string;
 }
 
 function formatValue(value: unknown) {
@@ -19,6 +19,10 @@ function formatValue(value: unknown) {
 }
 
 function buildVariables(frame: AnimationFrame, inputLength: number): VariableItem[] {
+  if (frame.variables) {
+    return frame.variables;
+  }
+
   const currentChar = frame.currentChar;
   const currentLast =
     currentChar !== null ? frame.lastMap[currentChar] : null;
@@ -70,19 +74,42 @@ function buildVariables(frame: AnimationFrame, inputLength: number): VariableIte
   return items;
 }
 
-function buildLastPreview(frame: AnimationFrame) {
+function buildDefaultBlocks(frame: AnimationFrame): InspectBlock[] {
   const entries = Object.entries(frame.lastMap);
+  const preview =
+    entries.length === 0
+      ? "{}"
+      : entries
+          .slice(0, 8)
+          .map(([char, index]) => `'${char}': ${index}`)
+          .join(", ");
 
-  if (entries.length === 0) {
-    return "{}";
-  }
-
-  const preview = entries
-    .slice(0, 8)
-    .map(([char, index]) => `'${char}': ${index}`)
-    .join(", ");
-
-  return entries.length > 8 ? `{ ${preview}, ... }` : `{ ${preview} }`;
+  return [
+    {
+      label: "last",
+      value:
+        entries.length === 0
+          ? "{}"
+          : entries.length > 8
+            ? `{ ${preview}, ... }`
+            : `{ ${preview} }`
+    },
+    {
+      label: "closed_segments",
+      value:
+        frame.closedSegments.length === 0
+          ? "[]"
+          : JSON.stringify(
+              frame.closedSegments.map((segment) => ({
+                start: segment.start,
+                end: segment.end,
+                len: segment.length
+              })),
+              null,
+              2
+            )
+    }
+  ];
 }
 
 export function FrameVariablesPanel({
@@ -91,7 +118,7 @@ export function FrameVariablesPanel({
 }: FrameVariablesPanelProps) {
   const frame = problem.frames[frameIndex];
   const variables = buildVariables(frame, problem.inputValue.length);
-  const lastPreview = buildLastPreview(frame);
+  const blocks = frame.inspectBlocks ?? buildDefaultBlocks(frame);
 
   return (
     <div className="variables-panel">
@@ -109,27 +136,12 @@ export function FrameVariablesPanel({
         ))}
       </div>
 
-      <div className="variables-panel__block">
-        <span>last</span>
-        <pre>{lastPreview}</pre>
-      </div>
-
-      <div className="variables-panel__block">
-        <span>closed_segments</span>
-        <pre>
-          {frame.closedSegments.length === 0
-            ? "[]"
-            : JSON.stringify(
-                frame.closedSegments.map((segment) => ({
-                  start: segment.start,
-                  end: segment.end,
-                  len: segment.length
-                })),
-                null,
-                2
-              )}
-        </pre>
-      </div>
+      {blocks.map((block) => (
+        <div key={block.label} className="variables-panel__block">
+          <span>{block.label}</span>
+          <pre>{block.value}</pre>
+        </div>
+      ))}
     </div>
   );
 }
