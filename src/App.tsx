@@ -69,14 +69,24 @@ function App() {
               selectedId={selectedId}
               onSelect={setSelectedId}
             />
-            <a
-              className="hero__link"
-              href={selectedProblem.leetcodeUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
-              打开 LeetCode 原题
-            </a>
+            <div className="hero__links">
+              <a
+                className="hero__link"
+                href={selectedProblem.leetcodeUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                打开 LeetCode 原题
+              </a>
+              <a
+                className="hero__link hero__link--github"
+                href="https://github.com/hyi/yi_leetcode_show"
+                target="_blank"
+                rel="noreferrer"
+              >
+                GitHub
+              </a>
+            </div>
           </div>
         </div>
       </header>

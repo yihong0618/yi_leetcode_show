@@ -12,7 +12,7 @@ import type {
   TrieView
 } from "../types";
 
-const segmentPalette = ["#6b8399", "#6d917e", "#8a8572", "#5a7194", "#7e6e8a"];
+const segmentPalette = ["#ef6b6b", "#3bafa8", "#f7ce46", "#4a98c8", "#b47dc8"];
 const TRIE_NODE_RADIUS = 30;
 const TRIE_ROOT_RADIUS = 38;
 const TRIE_X_GAP = 156;
