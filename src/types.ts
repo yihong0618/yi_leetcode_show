@@ -52,7 +52,26 @@ export interface PartitionLabelsView {
   characters: string[];
 }
 
-export type AnimationFrameView = PartitionLabelsView | TrieView;
+export interface DecodeStringStackEntry {
+  str: string;
+  num: number;
+}
+
+export type DecodeStackAction =
+  | { type: "idle" }
+  | { type: "push"; entry: DecodeStringStackEntry }
+  | { type: "pop"; entry: DecodeStringStackEntry; resultStr: string };
+
+export interface DecodeStringView {
+  kind: "decode-string";
+  characters: string[];
+  stack: DecodeStringStackEntry[];
+  currentStr: string;
+  currentNum: string;
+  action: DecodeStackAction;
+}
+
+export type AnimationFrameView = PartitionLabelsView | TrieView | DecodeStringView;
 
 export interface AnimationFrame {
   id: string;

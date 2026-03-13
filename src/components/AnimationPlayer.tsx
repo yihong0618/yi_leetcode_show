@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import type {
   AnimationFrameView,
   AnimationProblem,
+  DecodeStringView,
+  DecodeStringStackEntry,
   FramePhase,
   Segment,
   SolutionDefinition,
@@ -66,6 +68,10 @@ function playbackFrameStep(speed: number) {
 
 function isTrieView(view: AnimationFrameView | undefined): view is TrieView {
   return view?.kind === "trie";
+}
+
+function isDecodeStringView(view: AnimationFrameView | undefined): view is DecodeStringView {
+  return view?.kind === "decode-string";
 }
 
 function formatJson(value: unknown) {
@@ -367,6 +373,394 @@ function renderPartitionStage(problem: AnimationProblem, frameIndex: number) {
   );
 }
 
+const DSTACK_ENTRY_W = 220;
+const DSTACK_ENTRY_H = 56;
+const DSTACK_GAP = 8;
+const DSTACK_PAD_X = 24;
+const DSTACK_PAD_TOP = 24;
+const DSTACK_PAD_BOTTOM = 16;
+const DSTACK_LABEL_H = 32;
+const DSTACK_WORK_GAP = 48;
+const DSTACK_WORK_W = 260;
+
+function stackEntryLabel(entry: DecodeStringStackEntry) {
+  const str = entry.str === "" ? '""' : `"${entry.str}"`;
+  return `${entry.num}× ${str}`;
+}
+
+function renderDecodeStringStage(problem: AnimationProblem, frameIndex: number, view: DecodeStringView) {
+  const frame = problem.frames[frameIndex];
+  const characters = view.characters;
+  const action = view.action;
+
+  const maxSlots = Math.max(view.stack.length + 1, 3);
+  const stackBodyH =
+    maxSlots * DSTACK_ENTRY_H + (maxSlots - 1) * DSTACK_GAP;
+  const svgH =
+    DSTACK_PAD_TOP + DSTACK_LABEL_H + stackBodyH + DSTACK_PAD_BOTTOM;
+  const svgW =
+    DSTACK_PAD_X + DSTACK_ENTRY_W + DSTACK_WORK_GAP + DSTACK_WORK_W + DSTACK_PAD_X;
+
+  const stackTopX = DSTACK_PAD_X;
+  const stackTopY = DSTACK_PAD_TOP + DSTACK_LABEL_H;
+
+  const workAreaX = DSTACK_PAD_X + DSTACK_ENTRY_W + DSTACK_WORK_GAP;
+  const workAreaY = stackTopY;
+
+  const stackEntries = [...view.stack].reverse();
+
+  return (
+    <>
+      <div className="stage-card stage-card--trie">
+        <p className="stage-card__caption">{frame.caption}</p>
+
+        <div className="string-strip">
+          {characters.map((char, index) => {
+            const isCurrent = frame.currentIndex === index;
+            const isScanned =
+              frame.currentIndex !== null && index < frame.currentIndex;
+
+            const isDigit = char >= "0" && char <= "9";
+            const isBracket = char === "[" || char === "]";
+            const classes = ["char-card"];
+
+            if (isCurrent) {
+              classes.push("char-card--current");
+            } else if (isScanned) {
+              classes.push("char-card--range");
+            }
+            if (isDigit && !isCurrent && !isScanned) {
+              classes.push("char-card--mapped");
+            }
+            if (isBracket && !isCurrent && !isScanned) {
+              classes.push("char-card--last");
+            }
+
+            return (
+              <div key={`${char}-${index}`} className={classes.join(" ")}>
+                <span className="char-card__index">{index}</span>
+                <span className="char-card__char">{char}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="decode-scene">
+          <svg
+            className="decode-scene__svg"
+            viewBox={`0 0 ${svgW} ${svgH}`}
+            role="img"
+            aria-label="Stack visualization"
+          >
+            <defs>
+              <linearGradient id="ds-stack-bg" x1="0%" x2="0%" y1="0%" y2="100%">
+                <stop offset="0%" stopColor="rgba(77,109,209,0.08)" />
+                <stop offset="100%" stopColor="rgba(77,109,209,0.02)" />
+              </linearGradient>
+              <linearGradient id="ds-work-bg" x1="0%" x2="0%" y1="0%" y2="100%">
+                <stop offset="0%" stopColor="rgba(31,157,139,0.08)" />
+                <stop offset="100%" stopColor="rgba(31,157,139,0.02)" />
+              </linearGradient>
+            </defs>
+
+            {/* stack container */}
+            <rect
+              x={stackTopX - 4}
+              y={DSTACK_PAD_TOP}
+              width={DSTACK_ENTRY_W + 8}
+              height={DSTACK_LABEL_H + stackBodyH + DSTACK_PAD_BOTTOM}
+              rx={18}
+              fill="url(#ds-stack-bg)"
+              stroke="rgba(77,109,209,0.15)"
+              strokeWidth={1.5}
+            />
+            <text
+              x={stackTopX + DSTACK_ENTRY_W / 2}
+              y={DSTACK_PAD_TOP + 22}
+              textAnchor="middle"
+              className="decode-scene__label"
+            >
+              stack
+            </text>
+
+            {/* stack slots bottom-to-top */}
+            {Array.from({ length: maxSlots }).map((_, slotIdx) => {
+              const y =
+                stackTopY +
+                stackBodyH -
+                (slotIdx + 1) * DSTACK_ENTRY_H -
+                slotIdx * DSTACK_GAP;
+              return (
+                <rect
+                  key={`slot-${slotIdx}`}
+                  x={stackTopX}
+                  y={y}
+                  width={DSTACK_ENTRY_W}
+                  height={DSTACK_ENTRY_H}
+                  rx={12}
+                  fill="rgba(255,255,255,0.35)"
+                  stroke="rgba(77,109,209,0.08)"
+                  strokeWidth={1}
+                  strokeDasharray="6 4"
+                />
+              );
+            })}
+
+            {/* actual stack entries (rendered bottom to top) */}
+            {stackEntries.map((entry, revIdx) => {
+              const slotIdx = view.stack.length - 1 - revIdx;
+              const y =
+                stackTopY +
+                stackBodyH -
+                (slotIdx + 1) * DSTACK_ENTRY_H -
+                slotIdx * DSTACK_GAP;
+              const isTop = revIdx === 0;
+              const isPushed = action.type === "push" && isTop;
+
+              return (
+                <g
+                  key={`entry-${revIdx}`}
+                  className={`decode-entry${isPushed ? " decode-entry--push" : ""}${
+                    isTop ? " decode-entry--top" : ""
+                  }`}
+                >
+                  <rect
+                    x={stackTopX}
+                    y={y}
+                    width={DSTACK_ENTRY_W}
+                    height={DSTACK_ENTRY_H}
+                    rx={12}
+                    className="decode-entry__bg"
+                  />
+                  <text
+                    x={stackTopX + 14}
+                    y={y + 22}
+                    className="decode-entry__index"
+                  >
+                    #{slotIdx}
+                  </text>
+                  <text
+                    x={stackTopX + 14}
+                    y={y + 42}
+                    className="decode-entry__value"
+                  >
+                    {stackEntryLabel(entry)}
+                  </text>
+                  {isTop ? (
+                    <text
+                      x={stackTopX + DSTACK_ENTRY_W - 14}
+                      y={y + DSTACK_ENTRY_H / 2 + 5}
+                      textAnchor="end"
+                      className="decode-entry__badge"
+                    >
+                      TOP
+                    </text>
+                  ) : null}
+                </g>
+              );
+            })}
+
+            {/* push / pop arrow */}
+            {action.type === "push" ? (
+              <g className="decode-arrow decode-arrow--push">
+                <line
+                  x1={stackTopX + DSTACK_ENTRY_W + 12}
+                  y1={stackTopY + stackBodyH - view.stack.length * (DSTACK_ENTRY_H + DSTACK_GAP) + DSTACK_ENTRY_H / 2}
+                  x2={stackTopX + DSTACK_ENTRY_W + 28}
+                  y2={stackTopY + stackBodyH - view.stack.length * (DSTACK_ENTRY_H + DSTACK_GAP) + DSTACK_ENTRY_H / 2}
+                />
+                <text
+                  x={stackTopX + DSTACK_ENTRY_W + 32}
+                  y={stackTopY + stackBodyH - view.stack.length * (DSTACK_ENTRY_H + DSTACK_GAP) + DSTACK_ENTRY_H / 2 + 5}
+                  className="decode-arrow__label"
+                >
+                  PUSH
+                </text>
+              </g>
+            ) : null}
+            {action.type === "pop" ? (
+              <g className="decode-arrow decode-arrow--pop">
+                <line
+                  x1={stackTopX + DSTACK_ENTRY_W + 12}
+                  y1={stackTopY + stackBodyH - (view.stack.length + 1) * (DSTACK_ENTRY_H + DSTACK_GAP) + DSTACK_ENTRY_H / 2 + DSTACK_GAP}
+                  x2={stackTopX + DSTACK_ENTRY_W + 28}
+                  y2={stackTopY + stackBodyH - (view.stack.length + 1) * (DSTACK_ENTRY_H + DSTACK_GAP) + DSTACK_ENTRY_H / 2 + DSTACK_GAP}
+                />
+                <text
+                  x={stackTopX + DSTACK_ENTRY_W + 32}
+                  y={stackTopY + stackBodyH - (view.stack.length + 1) * (DSTACK_ENTRY_H + DSTACK_GAP) + DSTACK_ENTRY_H / 2 + DSTACK_GAP + 5}
+                  className="decode-arrow__label decode-arrow__label--pop"
+                >
+                  POP
+                </text>
+              </g>
+            ) : null}
+
+            {/* working area */}
+            <rect
+              x={workAreaX - 4}
+              y={DSTACK_PAD_TOP}
+              width={DSTACK_WORK_W + 8}
+              height={DSTACK_LABEL_H + stackBodyH + DSTACK_PAD_BOTTOM}
+              rx={18}
+              fill="url(#ds-work-bg)"
+              stroke="rgba(31,157,139,0.15)"
+              strokeWidth={1.5}
+            />
+            <text
+              x={workAreaX + DSTACK_WORK_W / 2}
+              y={DSTACK_PAD_TOP + 22}
+              textAnchor="middle"
+              className="decode-scene__label decode-scene__label--work"
+            >
+              工作区
+            </text>
+
+            {/* cur_str */}
+            <rect
+              x={workAreaX}
+              y={workAreaY}
+              width={DSTACK_WORK_W}
+              height={DSTACK_ENTRY_H}
+              rx={12}
+              className={`decode-work__box${
+                action.type === "pop" ? " decode-work__box--pop" : ""
+              }`}
+            />
+            <text
+              x={workAreaX + 12}
+              y={workAreaY + 20}
+              className="decode-work__label"
+            >
+              cur_str
+            </text>
+            <text
+              x={workAreaX + 12}
+              y={workAreaY + 42}
+              className="decode-work__value"
+            >
+              {view.currentStr === "" ? '""' : `"${view.currentStr.length > 18 ? view.currentStr.slice(0, 16) + "…" : view.currentStr}"`}
+            </text>
+
+            {/* cur_num */}
+            <rect
+              x={workAreaX}
+              y={workAreaY + DSTACK_ENTRY_H + DSTACK_GAP}
+              width={DSTACK_WORK_W}
+              height={DSTACK_ENTRY_H}
+              rx={12}
+              className="decode-work__box"
+            />
+            <text
+              x={workAreaX + 12}
+              y={workAreaY + DSTACK_ENTRY_H + DSTACK_GAP + 20}
+              className="decode-work__label"
+            >
+              cur_num
+            </text>
+            <text
+              x={workAreaX + 12}
+              y={workAreaY + DSTACK_ENTRY_H + DSTACK_GAP + 42}
+              className="decode-work__value"
+            >
+              {view.currentNum}
+            </text>
+
+            {/* result preview at bottom of work area */}
+            {action.type === "pop" ? (
+              <g className="decode-result">
+                <rect
+                  x={workAreaX}
+                  y={workAreaY + 2 * (DSTACK_ENTRY_H + DSTACK_GAP) + 12}
+                  width={DSTACK_WORK_W}
+                  height={DSTACK_ENTRY_H + 8}
+                  rx={12}
+                  className="decode-result__box"
+                />
+                <text
+                  x={workAreaX + 12}
+                  y={workAreaY + 2 * (DSTACK_ENTRY_H + DSTACK_GAP) + 32}
+                  className="decode-result__label"
+                >
+                  {action.entry.num}× 重复 → 拼接
+                </text>
+                <text
+                  x={workAreaX + 12}
+                  y={workAreaY + 2 * (DSTACK_ENTRY_H + DSTACK_GAP) + 56}
+                  className="decode-result__value"
+                >
+                  {action.resultStr.length > 20
+                    ? `"${action.resultStr.slice(0, 18)}…"`
+                    : `"${action.resultStr}"`}
+                </text>
+              </g>
+            ) : null}
+          </svg>
+        </div>
+
+        <div className="legend-row">
+          <span>当前扫描字符</span>
+          <span>数字 / 括号</span>
+          <span>栈中保存的上下文</span>
+        </div>
+      </div>
+
+      <aside className="details-card details-card--trie">
+        <div className="stats-grid">
+          <div className="stats-grid__item">
+            <span>current</span>
+            <strong>
+              {frame.currentIndex === null
+                ? "--"
+                : `${frame.currentIndex} · ${frame.currentChar}`}
+            </strong>
+          </div>
+          <div className="stats-grid__item">
+            <span>cur_str</span>
+            <strong>&quot;{view.currentStr}&quot;</strong>
+          </div>
+          <div className="stats-grid__item">
+            <span>cur_num</span>
+            <strong>{view.currentNum}</strong>
+          </div>
+          <div className="stats-grid__item">
+            <span>stack.len</span>
+            <strong>{view.stack.length}</strong>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="details-card__title">当前累积字符串</h3>
+          <p className="details-card__empty">
+            {view.currentStr === "" ? '""\uff08\u7a7a\uff09' : `"${view.currentStr}"`}
+          </p>
+        </div>
+
+        <div>
+          <h3 className="details-card__title">栈内容</h3>
+          {view.stack.length === 0 ? (
+            <p className="details-card__empty">栈为空</p>
+          ) : (
+            <div className="trie-history">
+              {view.stack.map((entry, index) => (
+                <div
+                  key={index}
+                  className="trie-history__item"
+                >
+                  <strong>#{index}</strong>
+                  <span>
+                    str=&quot;{entry.str}&quot;, num={entry.num}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </aside>
+    </>
+  );
+}
+
 function renderTrieStage(problem: AnimationProblem, frameIndex: number, view: TrieView) {
   const frame = problem.frames[frameIndex];
   const layout = buildTrieTreeLayout(view.nodes);
@@ -589,6 +983,8 @@ export function AnimationPlayer({
   const referenceLines = solution.code.split("\n");
   const activeLines = solution.highlightLines[frame.codeStep] ?? [];
   const trieFrame = isTrieView(frame.view);
+  const decodeStringFrame = isDecodeStringView(frame.view);
+  const specialLayout = trieFrame || decodeStringFrame;
 
   useEffect(() => {
     setIsPlaying(false);
@@ -720,19 +1116,21 @@ export function AnimationPlayer({
         )}
       </label>
 
-      {trieFrame ? controls : null}
+      {specialLayout ? controls : null}
 
       <div
         className={`animation-player__grid${
-          trieFrame ? " animation-player__grid--trie" : ""
+          specialLayout ? " animation-player__grid--trie" : ""
         }`}
       >
         {trieFrame
           ? renderTrieStage(problem, frameIndex, frame.view as TrieView)
-          : renderPartitionStage(problem, frameIndex)}
+          : decodeStringFrame
+            ? renderDecodeStringStage(problem, frameIndex, frame.view as DecodeStringView)
+            : renderPartitionStage(problem, frameIndex)}
       </div>
 
-      {trieFrame ? null : controls}
+      {specialLayout ? null : controls}
 
       <section className="reference-card">
         <div className="reference-card__header">
