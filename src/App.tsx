@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AnimationPlayer } from "./components/AnimationPlayer";
 import { CodeWorkbench } from "./components/CodeWorkbench";
 import { FrameVariablesPanel } from "./components/FrameVariablesPanel";
@@ -6,8 +6,25 @@ import { ProblemSelector } from "./components/ProblemSelector";
 import { problems } from "./content/problems";
 import type { AnimationProblem } from "./types";
 
+function getSlugFromHash(): string {
+  const hash = window.location.hash; // e.g. "#/partition-labels"
+  if (hash.startsWith("#/")) return hash.slice(2);
+  if (hash.startsWith("#")) return hash.slice(1);
+  return "";
+}
+
+function findProblemBySlug(slug: string) {
+  return problems.find((p) => p.slug === slug);
+}
+
+function initialProblemId(): string {
+  const slug = getSlugFromHash();
+  const matched = findProblemBySlug(slug);
+  return matched ? matched.id : problems[0].id;
+}
+
 function App() {
-  const [selectedId, setSelectedId] = useState(problems[0].id);
+  const [selectedId, setSelectedId] = useState(initialProblemId);
   const [frameIndex, setFrameIndex] = useState(0);
 
   const selectedProblem =
@@ -27,6 +44,34 @@ function App() {
     ...selectedProblem,
     ...visualization
   };
+
+  const handleSelectProblem = useCallback((nextId: string) => {
+    const nextProblem = problems.find((p) => p.id === nextId);
+    if (nextProblem) {
+      window.location.hash = `#/${nextProblem.slug}`;
+    }
+    setSelectedId(nextId);
+  }, []);
+
+  // Sync from hash change (browser back/forward)
+  useEffect(() => {
+    function onHashChange() {
+      const slug = getSlugFromHash();
+      const matched = findProblemBySlug(slug);
+      if (matched && matched.id !== selectedId) {
+        setSelectedId(matched.id);
+      }
+    }
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, [selectedId]);
+
+  // Set hash on initial load if not already set
+  useEffect(() => {
+    if (!getSlugFromHash()) {
+      window.location.hash = `#/${selectedProblem.slug}`;
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const defaultSolution =
@@ -67,7 +112,7 @@ function App() {
             <ProblemSelector
               problems={problems}
               selectedId={selectedId}
-              onSelect={setSelectedId}
+              onSelect={handleSelectProblem}
             />
             <div className="hero__links">
               <a
