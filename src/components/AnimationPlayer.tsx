@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type {
   AnimationFrameView,
   AnimationProblem,
+  CoinChangeView,
   DecodeStringView,
   DecodeStringStackEntry,
   FramePhase,
@@ -72,6 +73,10 @@ function isTrieView(view: AnimationFrameView | undefined): view is TrieView {
 
 function isDecodeStringView(view: AnimationFrameView | undefined): view is DecodeStringView {
   return view?.kind === "decode-string";
+}
+
+function isCoinChangeView(view: AnimationFrameView | undefined): view is CoinChangeView {
+  return view?.kind === "coin-change";
 }
 
 function formatJson(value: unknown) {
@@ -367,6 +372,140 @@ function renderPartitionStage(problem: AnimationProblem, frameIndex: number) {
               ))}
             </div>
           )}
+        </div>
+      </aside>
+    </>
+  );
+}
+
+function renderCoinChangeStage(problem: AnimationProblem, frameIndex: number, view: CoinChangeView) {
+  const frame = problem.frames[frameIndex];
+  const { coins, dp, currentAmount, currentCoin, referencedAmount, isUpdate } = view;
+  const INF = dp.length; // amount + 1 is used as infinity
+
+  function dpVal(v: number) {
+    return v >= INF ? "∞" : String(v);
+  }
+
+  return (
+    <>
+      <div className="stage-card stage-card--trie">
+        <p className="stage-card__caption">{frame.caption}</p>
+
+        <div className="coin-change-coins">
+          <span className="coin-change-coins__label">coins</span>
+          {coins.map((coin) => (
+            <div
+              key={coin}
+              className={`coin-change-coins__badge${
+                currentCoin === coin ? " coin-change-coins__badge--active" : ""
+              }`}
+            >
+              {coin}
+            </div>
+          ))}
+        </div>
+
+        <div className="string-strip">
+          {dp.map((val, i) => {
+            const isCurrent = currentAmount === i;
+            const isReferenced = referencedAmount === i;
+            const isFinalized =
+              currentAmount !== null ? i < currentAmount : frame.phase === "done";
+
+            const classes = ["char-card"];
+
+            if (isCurrent && isUpdate) {
+              classes.push("char-card--current");
+            } else if (isCurrent) {
+              classes.push("char-card--last");
+            } else if (isReferenced) {
+              classes.push("char-card--mapped");
+            } else if (isFinalized && val < INF) {
+              classes.push("char-card--range");
+            }
+
+            return (
+              <div key={i} className={classes.join(" ")}>
+                <span className="char-card__index">{i}</span>
+                <span className="char-card__char">{dpVal(val)}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {currentAmount !== null && referencedAmount !== null && currentCoin !== null ? (
+          <div className="coin-change-hint">
+            dp[{currentAmount}] = min(dp[{currentAmount}], dp[{referencedAmount}] + 1)
+            {" = min("}
+            {dpVal(isUpdate ? (dp[currentAmount]) : dp[currentAmount])}
+            {", "}
+            {dpVal(dp[referencedAmount])} + 1)
+          </div>
+        ) : null}
+
+        <div className="legend-row">
+          <span>当前计算金额</span>
+          <span>参考金额 (i−coin)</span>
+          <span>已确定最优值</span>
+        </div>
+      </div>
+
+      <aside className="details-card details-card--trie">
+        <div className="stats-grid">
+          <div className="stats-grid__item">
+            <span>amount</span>
+            <strong>{currentAmount ?? "--"}</strong>
+          </div>
+          <div className="stats-grid__item">
+            <span>coin</span>
+            <strong>{currentCoin ?? "--"}</strong>
+          </div>
+          <div className="stats-grid__item">
+            <span>dp[i]</span>
+            <strong>
+              {currentAmount !== null ? dpVal(dp[currentAmount]) : "--"}
+            </strong>
+          </div>
+          <div className="stats-grid__item">
+            <span>dp[i−c]</span>
+            <strong>
+              {referencedAmount !== null ? dpVal(dp[referencedAmount]) : "--"}
+            </strong>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="details-card__title">DP 数组</h3>
+          <div className="coin-change-dp-grid">
+            {dp.map((val, i) => (
+              <div
+                key={i}
+                className={`coin-change-dp-grid__cell${
+                  currentAmount === i ? " coin-change-dp-grid__cell--current" : ""
+                }`}
+              >
+                <span>{i}</span>
+                <strong>{dpVal(val)}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="details-card__title">硬币面值</h3>
+          <div className="coin-change-coins coin-change-coins--compact">
+            {coins.map((coin) => (
+              <div
+                key={coin}
+                className={`coin-change-coins__badge${
+                  currentCoin === coin ? " coin-change-coins__badge--active" : ""
+                }`}
+              >
+                {coin}
+              </div>
+            ))}
+          </div>
         </div>
       </aside>
     </>
@@ -984,7 +1123,8 @@ export function AnimationPlayer({
   const activeLines = solution.highlightLines[frame.codeStep] ?? [];
   const trieFrame = isTrieView(frame.view);
   const decodeStringFrame = isDecodeStringView(frame.view);
-  const specialLayout = trieFrame || decodeStringFrame;
+  const coinChangeFrame = isCoinChangeView(frame.view);
+  const specialLayout = trieFrame || decodeStringFrame || coinChangeFrame;
 
   useEffect(() => {
     setIsPlaying(false);
@@ -1127,7 +1267,9 @@ export function AnimationPlayer({
           ? renderTrieStage(problem, frameIndex, frame.view as TrieView)
           : decodeStringFrame
             ? renderDecodeStringStage(problem, frameIndex, frame.view as DecodeStringView)
-            : renderPartitionStage(problem, frameIndex)}
+            : coinChangeFrame
+              ? renderCoinChangeStage(problem, frameIndex, frame.view as CoinChangeView)
+              : renderPartitionStage(problem, frameIndex)}
       </div>
 
       {specialLayout ? null : controls}

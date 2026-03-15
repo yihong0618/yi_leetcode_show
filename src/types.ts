@@ -71,7 +71,17 @@ export interface DecodeStringView {
   action: DecodeStackAction;
 }
 
-export type AnimationFrameView = PartitionLabelsView | TrieView | DecodeStringView;
+export interface CoinChangeView {
+  kind: "coin-change";
+  coins: number[];
+  dp: number[];
+  currentAmount: number | null;
+  currentCoin: number | null;
+  referencedAmount: number | null;
+  isUpdate: boolean;
+}
+
+export type AnimationFrameView = PartitionLabelsView | TrieView | DecodeStringView | CoinChangeView;
 
 export interface AnimationFrame {
   id: string;

@@ -1,3 +1,4 @@
+import { coinChangeProblem } from "./coinChange";
 import { decodeStringProblem } from "./decodeString";
 import { implementTriePrefixTreeProblem } from "./implementTriePrefixTree";
 import { partitionLabelsProblem } from "./partitionLabels";
@@ -5,5 +6,6 @@ import { partitionLabelsProblem } from "./partitionLabels";
 export const problems = [
   partitionLabelsProblem,
   decodeStringProblem,
-  implementTriePrefixTreeProblem
+  implementTriePrefixTreeProblem,
+  coinChangeProblem
 ];
