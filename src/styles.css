@@ -1548,50 +1548,180 @@ button:hover {
   }
 }
 
-/* ── Coin Change ─────────────────────────────────────── */
+/* ── Coin Change (backpack theme) ─────────────────────── */
 
-.coin-change-coins {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
+.coin-change-scene {
+  width: 100%;
+  overflow-x: auto;
 }
 
-.coin-change-coins__label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--muted);
-  margin-right: 4px;
+.coin-change-scene__svg {
+  width: 100%;
+  max-height: 420px;
+  display: block;
 }
 
-.coin-change-coins__badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background: rgba(247, 206, 70, 0.15);
-  border: 2px solid rgba(247, 206, 70, 0.35);
+/* Labels */
+.cc-label {
+  font-size: 12px;
   font-weight: 700;
-  font-size: 15px;
-  color: #8a7020;
-  transition: all 0.2s;
+  fill: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.coin-change-coins__badge--active {
-  background: rgba(247, 206, 70, 0.35);
-  border-color: var(--gold);
-  box-shadow: 0 6px 16px rgba(247, 206, 70, 0.25);
-  transform: scale(1.12);
+/* Coins (left palette) */
+.cc-coin {
+  transition: transform 0.2s;
 }
 
-.coin-change-coins--compact .coin-change-coins__badge {
-  width: 34px;
-  height: 34px;
+.cc-coin--active {
+  animation: cc-pulse 0.8s ease-in-out infinite alternate;
+}
+
+.cc-coin__value {
+  font-family: var(--mono-font);
+  font-size: 16px;
+  font-weight: 700;
+  fill: #6B4E13;
+  pointer-events: none;
+}
+
+.cc-coin__value--sm {
   font-size: 13px;
 }
 
+.cc-coin__ring {
+  animation: cc-ring-spin 2.5s linear infinite;
+  transform-origin: center;
+}
+
+/* Arrow line from coin to bag */
+.cc-arrow-line {
+  animation: cc-dash 1s linear infinite;
+}
+
+/* Backpack labels */
+.cc-bag__cap {
+  font-family: var(--mono-font);
+  font-size: 14px;
+  font-weight: 700;
+  fill: rgba(255, 255, 255, 0.9);
+}
+
+.cc-bag__count {
+  font-family: var(--mono-font);
+  font-size: 12px;
+  font-weight: 700;
+  fill: rgba(255, 255, 255, 0.55);
+}
+
+.cc-bag__symbol {
+  font-size: 36px;
+  font-weight: 800;
+  fill: rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+}
+
+.cc-clasp-text {
+  font-size: 11px;
+  font-weight: 800;
+  fill: #6B4E13;
+  pointer-events: none;
+}
+
+/* Mini coins inside bag */
+.cc-mini-coin {
+  animation: cc-mini-pop 0.3s ease-out both;
+}
+
+/* Flying coin above backpack */
+.cc-flying--drop {
+  animation: cc-drop 0.45s ease-in both;
+}
+
+.cc-flying--reject {
+  animation: cc-reject 0.45s ease-out both;
+}
+
+.cc-action-label {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cc-action-label--ok {
+  fill: #2e9960;
+}
+
+.cc-action-label--skip {
+  fill: #c55858;
+}
+
+/* Reference sub-problem (right mini bag) */
+.cc-ref__label {
+  font-family: var(--mono-font);
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--muted);
+}
+
+.cc-ref__val {
+  font-family: var(--mono-font);
+  font-size: 16px;
+  font-weight: 700;
+  fill: var(--ink);
+}
+
+.cc-ref__hint {
+  font-family: var(--mono-font);
+  font-size: 11px;
+  font-weight: 500;
+  fill: var(--blue);
+}
+
+/* DP array cells (SVG) */
+.cc-dp__bg {
+  fill: rgba(22, 34, 51, 0.05);
+  stroke: rgba(22, 34, 51, 0.06);
+  stroke-width: 1;
+  transition: fill 0.2s;
+}
+
+.cc-dp__idx {
+  font-size: 9px;
+  fill: var(--muted);
+  font-weight: 500;
+}
+
+.cc-dp__val {
+  font-family: var(--mono-font);
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--ink);
+}
+
+.cc-dp--current .cc-dp__bg {
+  fill: rgba(239, 107, 107, 0.14);
+  stroke: rgba(239, 107, 107, 0.30);
+}
+
+.cc-dp--updated .cc-dp__bg {
+  fill: rgba(46, 153, 96, 0.14);
+  stroke: rgba(46, 153, 96, 0.30);
+  animation: cc-cell-flash 0.4s ease-out;
+}
+
+.cc-dp--ref .cc-dp__bg {
+  fill: rgba(74, 152, 200, 0.12);
+  stroke: rgba(74, 152, 200, 0.25);
+}
+
+.cc-dp--done .cc-dp__bg {
+  fill: rgba(59, 175, 168, 0.08);
+  stroke: rgba(59, 175, 168, 0.12);
+}
+
+/* Hint formula */
 .coin-change-hint {
   margin: 8px 0 4px;
   padding: 8px 14px;
@@ -1604,6 +1734,43 @@ button:hover {
   font-weight: 500;
 }
 
+/* Coins badges reused in aside */
+.coin-change-coins {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.coin-change-coins__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(247, 206, 70, 0.15);
+  border: 2px solid rgba(247, 206, 70, 0.35);
+  font-weight: 700;
+  font-size: 13px;
+  color: #8a7020;
+  transition: all 0.2s;
+}
+
+.coin-change-coins__badge--active {
+  background: rgba(247, 206, 70, 0.35);
+  border-color: var(--gold);
+  box-shadow: 0 6px 16px rgba(247, 206, 70, 0.25);
+  transform: scale(1.12);
+}
+
+.coin-change-coins--compact .coin-change-coins__badge {
+  width: 30px;
+  height: 30px;
+  font-size: 12px;
+}
+
+/* DP grid in aside panel */
 .coin-change-dp-grid {
   display: flex;
   flex-wrap: wrap;
@@ -1634,4 +1801,41 @@ button:hover {
 .coin-change-dp-grid__cell--current {
   background: rgba(239, 107, 107, 0.12);
   border: 1px solid rgba(239, 107, 107, 0.25);
+}
+
+/* ── Coin Change animations ── */
+
+@keyframes cc-pulse {
+  from { opacity: 1; }
+  to   { opacity: 0.75; }
+}
+
+@keyframes cc-ring-spin {
+  to { stroke-dashoffset: -40; }
+}
+
+@keyframes cc-dash {
+  to { stroke-dashoffset: -20; }
+}
+
+@keyframes cc-drop {
+  0%   { transform: translateY(0); opacity: 1; }
+  60%  { transform: translateY(18px); opacity: 1; }
+  100% { transform: translateY(28px); opacity: 0.4; }
+}
+
+@keyframes cc-reject {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+  40%  { transform: translateY(-8px) rotate(-6deg); opacity: 1; }
+  100% { transform: translateY(0) rotate(0deg); opacity: 0.6; }
+}
+
+@keyframes cc-mini-pop {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+@keyframes cc-cell-flash {
+  0%   { fill: rgba(46, 153, 96, 0.35); }
+  100% { fill: rgba(46, 153, 96, 0.14); }
 }

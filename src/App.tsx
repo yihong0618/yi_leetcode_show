@@ -125,7 +125,7 @@ function App() {
               </a>
               <a
                 className="hero__link hero__link--github"
-                href="https://github.com/hyi/yi_leetcode_show"
+                href="https://github.com/yihong0618/yi_leetcode_show"
                 target="_blank"
                 rel="noreferrer"
               >

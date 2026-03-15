@@ -381,57 +381,301 @@ function renderPartitionStage(problem: AnimationProblem, frameIndex: number) {
 function renderCoinChangeStage(problem: AnimationProblem, frameIndex: number, view: CoinChangeView) {
   const frame = problem.frames[frameIndex];
   const { coins, dp, currentAmount, currentCoin, referencedAmount, isUpdate } = view;
-  const INF = dp.length; // amount + 1 is used as infinity
+  const INF = dp.length;
 
   function dpVal(v: number) {
     return v >= INF ? "∞" : String(v);
   }
+
+  const SVG_W = 720;
+  const SVG_H = 390;
+  const COIN_R = 24;
+  const COIN_X = 72;
+  const COIN_Y0 = 80;
+  const COIN_GAP = 62;
+  const BAG_CX = 340;
+  const BAG_CY = 175;
+  const BAG_W = 130;
+  const BAG_H = 150;
+  const DP_PAD = 44;
+  const dpCount = dp.length;
+  const DP_CELL_W = Math.min(50, (SVG_W - DP_PAD * 2) / dpCount);
+  const DP_Y = SVG_H - 48;
+
+  const dpCurVal = currentAmount !== null ? dp[currentAmount] : null;
+  const coinsInBag = dpCurVal !== null && dpCurVal < INF ? dpCurVal : 0;
+
+  const miniCoinPositions: { x: number; y: number }[] = [];
+  for (let ci = 0; ci < Math.min(coinsInBag, 6); ci++) {
+    const col = ci % 3;
+    const row = Math.floor(ci / 3);
+    miniCoinPositions.push({
+      x: BAG_CX - 26 + col * 26,
+      y: BAG_CY + 50 - row * 26
+    });
+  }
+
+  const REF_BAG_CX = 570;
+  const REF_BAG_CY = 150;
+  const refVal = referencedAmount !== null ? dp[referencedAmount] : null;
 
   return (
     <>
       <div className="stage-card stage-card--trie">
         <p className="stage-card__caption">{frame.caption}</p>
 
-        <div className="coin-change-coins">
-          <span className="coin-change-coins__label">coins</span>
-          {coins.map((coin) => (
-            <div
-              key={coin}
-              className={`coin-change-coins__badge${
-                currentCoin === coin ? " coin-change-coins__badge--active" : ""
-              }`}
-            >
-              {coin}
-            </div>
-          ))}
-        </div>
+        <div className="coin-change-scene">
+          <svg
+            className="coin-change-scene__svg"
+            viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+            role="img"
+            aria-label="Coin change backpack visualization"
+          >
+            <defs>
+              <linearGradient id="cc-bag-body" x1="0%" x2="0%" y1="0%" y2="100%">
+                <stop offset="0%" stopColor="#8B7355" />
+                <stop offset="100%" stopColor="#5C4633" />
+              </linearGradient>
+              <linearGradient id="cc-bag-flap" x1="0%" x2="0%" y1="0%" y2="100%">
+                <stop offset="0%" stopColor="#A4906C" />
+                <stop offset="100%" stopColor="#8B7355" />
+              </linearGradient>
+              <linearGradient id="cc-gold" x1="20%" x2="80%" y1="0%" y2="100%">
+                <stop offset="0%" stopColor="#FFE066" />
+                <stop offset="50%" stopColor="#FFD700" />
+                <stop offset="100%" stopColor="#E6A800" />
+              </linearGradient>
+              <linearGradient id="cc-gold-hi" x1="20%" x2="80%" y1="0%" y2="100%">
+                <stop offset="0%" stopColor="#FFF3A0" />
+                <stop offset="50%" stopColor="#FFE44D" />
+                <stop offset="100%" stopColor="#FFD700" />
+              </linearGradient>
+              <linearGradient id="cc-mini-gold" x1="0%" x2="100%" y1="0%" y2="100%">
+                <stop offset="0%" stopColor="#FFD700" />
+                <stop offset="100%" stopColor="#E6A800" />
+              </linearGradient>
+              <filter id="cc-shadow-sm">
+                <feDropShadow dx="0" dy="1" stdDeviation="2" floodOpacity="0.18" />
+              </filter>
+              <filter id="cc-shadow-lg">
+                <feDropShadow dx="0" dy="4" stdDeviation="6" floodOpacity="0.14" />
+              </filter>
+            </defs>
 
-        <div className="string-strip">
-          {dp.map((val, i) => {
-            const isCurrent = currentAmount === i;
-            const isReferenced = referencedAmount === i;
-            const isFinalized =
-              currentAmount !== null ? i < currentAmount : frame.phase === "done";
+            <rect x="0" y="0" width={SVG_W} height={SVG_H} rx="24" fill="rgba(250,248,244,0.55)" />
 
-            const classes = ["char-card"];
+            {/* ── Left: available coins ── */}
+            <text x={COIN_X} y={COIN_Y0 - 40} textAnchor="middle" className="cc-label">可用硬币</text>
+            {coins.map((coin, idx) => {
+              const cy = COIN_Y0 + idx * COIN_GAP;
+              const isActive = currentCoin === coin;
+              return (
+                <g key={coin} className={`cc-coin${isActive ? " cc-coin--active" : ""}`}>
+                  <circle cx={COIN_X} cy={cy} r={COIN_R + 2} fill="rgba(0,0,0,0.06)" />
+                  <circle
+                    cx={COIN_X} cy={cy} r={COIN_R}
+                    fill={isActive ? "url(#cc-gold-hi)" : "url(#cc-gold)"}
+                    stroke={isActive ? "#D4A017" : "#C8961D"}
+                    strokeWidth={2}
+                    filter="url(#cc-shadow-sm)"
+                  />
+                  <circle cx={COIN_X} cy={cy} r={COIN_R - 5} fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth={1.5} />
+                  <text x={COIN_X} y={cy} textAnchor="middle" dominantBaseline="central" className="cc-coin__value">{coin}</text>
+                  {isActive ? (
+                    <circle cx={COIN_X} cy={cy} r={COIN_R + 8} fill="none" stroke="#FFD700" strokeWidth={2} strokeDasharray="5 5" className="cc-coin__ring" />
+                  ) : null}
+                </g>
+              );
+            })}
 
-            if (isCurrent && isUpdate) {
-              classes.push("char-card--current");
-            } else if (isCurrent) {
-              classes.push("char-card--last");
-            } else if (isReferenced) {
-              classes.push("char-card--mapped");
-            } else if (isFinalized && val < INF) {
-              classes.push("char-card--range");
-            }
+            {/* ── Arrow from active coin to bag ── */}
+            {currentCoin !== null && currentAmount !== null ? (
+              <line
+                x1={COIN_X + COIN_R + 14}
+                y1={COIN_Y0 + coins.indexOf(currentCoin) * COIN_GAP}
+                x2={BAG_CX - BAG_W / 2 - 8}
+                y2={BAG_CY - 10}
+                stroke="rgba(212,160,23,0.35)"
+                strokeWidth={2}
+                strokeDasharray="6 4"
+                className="cc-arrow-line"
+              />
+            ) : null}
 
-            return (
-              <div key={i} className={classes.join(" ")}>
-                <span className="char-card__index">{i}</span>
-                <span className="char-card__char">{dpVal(val)}</span>
-              </div>
-            );
-          })}
+            {/* ── Center: backpack ── */}
+            <g filter="url(#cc-shadow-lg)">
+              {/* Handle loop */}
+              <path
+                d={`M${BAG_CX - 18} ${BAG_CY - BAG_H / 2 - 2}
+                    Q${BAG_CX - 18} ${BAG_CY - BAG_H / 2 - 28}
+                     ${BAG_CX} ${BAG_CY - BAG_H / 2 - 28}
+                    Q${BAG_CX + 18} ${BAG_CY - BAG_H / 2 - 28}
+                     ${BAG_CX + 18} ${BAG_CY - BAG_H / 2 - 2}`}
+                fill="none" stroke="#6B5340" strokeWidth={7} strokeLinecap="round"
+              />
+
+              {/* Left strap */}
+              <path
+                d={`M${BAG_CX - 36} ${BAG_CY - BAG_H / 2 + 2}
+                    C${BAG_CX - 58} ${BAG_CY - BAG_H / 2 - 18}
+                     ${BAG_CX - 64} ${BAG_CY - BAG_H / 2 + 20}
+                     ${BAG_CX - 56} ${BAG_CY - BAG_H / 2 + 50}`}
+                fill="none" stroke="#6B5340" strokeWidth={6} strokeLinecap="round"
+              />
+              {/* Right strap */}
+              <path
+                d={`M${BAG_CX + 36} ${BAG_CY - BAG_H / 2 + 2}
+                    C${BAG_CX + 58} ${BAG_CY - BAG_H / 2 - 18}
+                     ${BAG_CX + 64} ${BAG_CY - BAG_H / 2 + 20}
+                     ${BAG_CX + 56} ${BAG_CY - BAG_H / 2 + 50}`}
+                fill="none" stroke="#6B5340" strokeWidth={6} strokeLinecap="round"
+              />
+
+              {/* Main body */}
+              <rect
+                x={BAG_CX - BAG_W / 2} y={BAG_CY - BAG_H / 2}
+                width={BAG_W} height={BAG_H}
+                rx={22}
+                fill="url(#cc-bag-body)"
+              />
+              {/* Left highlight sheen */}
+              <path
+                d={`M${BAG_CX - BAG_W / 2 + 12} ${BAG_CY - BAG_H / 2 + 40}
+                    L${BAG_CX - BAG_W / 2 + 12} ${BAG_CY + BAG_H / 2 - 30}`}
+                stroke="rgba(255,255,255,0.12)" strokeWidth={3} strokeLinecap="round" fill="none"
+              />
+
+              {/* Flap */}
+              <rect
+                x={BAG_CX - BAG_W / 2} y={BAG_CY - BAG_H / 2}
+                width={BAG_W} height={36}
+                rx={22}
+                fill="url(#cc-bag-flap)"
+              />
+              <rect
+                x={BAG_CX - BAG_W / 2} y={BAG_CY - BAG_H / 2 + 22}
+                width={BAG_W} height={14}
+                fill="url(#cc-bag-flap)"
+              />
+
+              {/* Clasp / ¥ buckle */}
+              <rect
+                x={BAG_CX - 16} y={BAG_CY - BAG_H / 2 + 26}
+                width={32} height={16} rx={8}
+                fill="#D4A017" stroke="#C8961D" strokeWidth={1}
+              />
+              <text x={BAG_CX} y={BAG_CY - BAG_H / 2 + 38} textAnchor="middle" className="cc-clasp-text">¥</text>
+
+              {/* Front pocket */}
+              <rect
+                x={BAG_CX - BAG_W / 2 + 16} y={BAG_CY + 14}
+                width={BAG_W - 32} height={46} rx={14}
+                fill="rgba(0,0,0,0.10)" stroke="rgba(0,0,0,0.06)" strokeWidth={1}
+              />
+
+              {/* ¥ watermark on body */}
+              <text x={BAG_CX} y={BAG_CY + 2} textAnchor="middle" dominantBaseline="central" className="cc-bag__symbol">¥</text>
+            </g>
+
+            {/* Capacity label */}
+            <text x={BAG_CX} y={BAG_CY - BAG_H / 2 + 58} textAnchor="middle" className="cc-bag__cap">
+              {currentAmount !== null ? `¥${currentAmount}` : `¥${dp.length - 1}`}
+            </text>
+
+            {/* Mini coins inside the bag */}
+            {miniCoinPositions.map((pos, ci) => (
+              <g key={ci} className="cc-mini-coin">
+                <circle cx={pos.x} cy={pos.y} r={10} fill="url(#cc-mini-gold)" stroke="#C8961D" strokeWidth={1.2} />
+                <circle cx={pos.x} cy={pos.y} r={6} fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth={1} />
+              </g>
+            ))}
+
+            {/* Count label in pocket */}
+            <text x={BAG_CX} y={BAG_CY + 42} textAnchor="middle" className="cc-bag__count">
+              {dpCurVal !== null
+                ? dpCurVal >= INF ? "无解" : `${dpCurVal} 枚`
+                : "--"}
+            </text>
+
+            {/* Flying coin being tried */}
+            {currentCoin !== null && currentAmount !== null ? (
+              <g className={`cc-flying${isUpdate ? " cc-flying--drop" : " cc-flying--reject"}`}>
+                <circle cx={BAG_CX} cy={BAG_CY - BAG_H / 2 - 48} r={18} fill="url(#cc-gold-hi)" stroke="#D4A017" strokeWidth={2} filter="url(#cc-shadow-sm)" />
+                <circle cx={BAG_CX} cy={BAG_CY - BAG_H / 2 - 48} r={12} fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth={1.2} />
+                <text x={BAG_CX} y={BAG_CY - BAG_H / 2 - 48} textAnchor="middle" dominantBaseline="central" className="cc-coin__value cc-coin__value--sm">{currentCoin}</text>
+                {isUpdate ? (
+                  <text x={BAG_CX} y={BAG_CY - BAG_H / 2 - 72} textAnchor="middle" className="cc-action-label cc-action-label--ok">✓ 放入</text>
+                ) : (
+                  <text x={BAG_CX} y={BAG_CY - BAG_H / 2 - 72} textAnchor="middle" className="cc-action-label cc-action-label--skip">✗ 跳过</text>
+                )}
+              </g>
+            ) : null}
+
+            {/* ── Right: reference sub-problem ── */}
+            {referencedAmount !== null && currentCoin !== null ? (
+              <g>
+                {/* Mini bag for dp[i-c] */}
+                <rect
+                  x={REF_BAG_CX - 44} y={REF_BAG_CY - 38}
+                  width={88} height={76} rx={16}
+                  fill="rgba(139,115,85,0.15)"
+                  stroke="rgba(139,115,85,0.25)"
+                  strokeWidth={1.5}
+                />
+                <rect
+                  x={REF_BAG_CX - 44} y={REF_BAG_CY - 38}
+                  width={88} height={20} rx={16}
+                  fill="rgba(164,144,108,0.2)"
+                />
+
+                <text x={REF_BAG_CX} y={REF_BAG_CY - 18} textAnchor="middle" className="cc-ref__label">
+                  dp[{referencedAmount}]
+                </text>
+                <text x={REF_BAG_CX} y={REF_BAG_CY + 8} textAnchor="middle" className="cc-ref__val">
+                  {refVal !== null ? dpVal(refVal) : "?"} 枚
+                </text>
+                <text x={REF_BAG_CX} y={REF_BAG_CY + 48} textAnchor="middle" className="cc-ref__hint">
+                  + 1 = {refVal !== null && refVal < INF ? refVal + 1 : "∞"}
+                </text>
+
+                {/* Arrow from mini bag to main bag */}
+                <path
+                  d={`M${REF_BAG_CX - 44} ${REF_BAG_CY} Q${BAG_CX + BAG_W / 2 + 30} ${REF_BAG_CY} ${BAG_CX + BAG_W / 2 + 8} ${BAG_CY - 20}`}
+                  fill="none"
+                  stroke="rgba(74,152,200,0.35)"
+                  strokeWidth={2}
+                  strokeDasharray="6 4"
+                />
+              </g>
+            ) : null}
+
+            {/* ── Bottom: DP array ── */}
+            {dpCount <= 30 ? (
+              <g>
+                <text x={DP_PAD} y={DP_Y - 22} className="cc-label">dp</text>
+                {dp.map((val, i) => {
+                  const x = DP_PAD + i * DP_CELL_W;
+                  const isCur = currentAmount === i;
+                  const isRef = referencedAmount === i;
+                  const isDone = (currentAmount !== null ? i < currentAmount : frame.phase === "done") && val < INF;
+
+                  let cls = "cc-dp";
+                  if (isCur && isUpdate) cls += " cc-dp--updated";
+                  else if (isCur) cls += " cc-dp--current";
+                  else if (isRef) cls += " cc-dp--ref";
+                  else if (isDone) cls += " cc-dp--done";
+
+                  return (
+                    <g key={i} className={cls}>
+                      <rect x={x + 1} y={DP_Y - 14} width={DP_CELL_W - 2} height={28} rx={6} className="cc-dp__bg" />
+                      <text x={x + DP_CELL_W / 2} y={DP_Y - 4} textAnchor="middle" className="cc-dp__idx">{i}</text>
+                      <text x={x + DP_CELL_W / 2} y={DP_Y + 10} textAnchor="middle" className="cc-dp__val">{dpVal(val)}</text>
+                    </g>
+                  );
+                })}
+              </g>
+            ) : null}
+          </svg>
         </div>
 
         {currentAmount !== null && referencedAmount !== null && currentCoin !== null ? (
@@ -446,7 +690,7 @@ function renderCoinChangeStage(problem: AnimationProblem, frameIndex: number, vi
 
         <div className="legend-row">
           <span>当前计算金额</span>
-          <span>参考金额 (i−coin)</span>
+          <span>参考子问题 (i−coin)</span>
           <span>已确定最优值</span>
         </div>
       </div>
