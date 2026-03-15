@@ -1688,14 +1688,14 @@ button:hover {
 }
 
 .cc-dp__idx {
-  font-size: 9px;
+  font-size: 11px;
   fill: var(--muted);
   font-weight: 500;
 }
 
 .cc-dp__val {
   font-family: var(--mono-font);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
   fill: var(--ink);
 }
@@ -1782,19 +1782,19 @@ button:hover {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 4px 8px;
+  padding: 6px 10px;
   border-radius: 10px;
   background: rgba(22, 34, 51, 0.04);
-  min-width: 36px;
+  min-width: 44px;
 }
 
 .coin-change-dp-grid__cell span {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 
 .coin-change-dp-grid__cell strong {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
 }
 

@@ -652,7 +652,7 @@ function renderCoinChangeStage(problem: AnimationProblem, frameIndex: number, vi
             {/* ── Bottom: DP array ── */}
             {dpCount <= 30 ? (
               <g>
-                <text x={DP_PAD} y={DP_Y - 22} className="cc-label">dp</text>
+                <text x={DP_PAD} y={DP_Y - 26} className="cc-label">dp</text>
                 {dp.map((val, i) => {
                   const x = DP_PAD + i * DP_CELL_W;
                   const isCur = currentAmount === i;
@@ -667,9 +667,9 @@ function renderCoinChangeStage(problem: AnimationProblem, frameIndex: number, vi
 
                   return (
                     <g key={i} className={cls}>
-                      <rect x={x + 1} y={DP_Y - 14} width={DP_CELL_W - 2} height={28} rx={6} className="cc-dp__bg" />
-                      <text x={x + DP_CELL_W / 2} y={DP_Y - 4} textAnchor="middle" className="cc-dp__idx">{i}</text>
-                      <text x={x + DP_CELL_W / 2} y={DP_Y + 10} textAnchor="middle" className="cc-dp__val">{dpVal(val)}</text>
+                      <rect x={x + 1} y={DP_Y - 18} width={DP_CELL_W - 2} height={38} rx={6} className="cc-dp__bg" />
+                      <text x={x + DP_CELL_W / 2} y={DP_Y - 5} textAnchor="middle" className="cc-dp__idx">{i}</text>
+                      <text x={x + DP_CELL_W / 2} y={DP_Y + 14} textAnchor="middle" className="cc-dp__val">{dpVal(val)}</text>
                     </g>
                   );
                 })}
